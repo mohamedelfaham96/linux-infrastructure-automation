@@ -1,0 +1,38 @@
+=== DATE ===
+Mon Nov  2 12:56:00 GMT 2026
+=== INVENTORY GRAPH ===
+@all:
+  |--@ungrouped:
+  |--@webservers:
+  |  |--control
+  |  |--node02
+=== CONNECTIVITY ===
+control | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+node02 | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+=== HOSTNAMES ===
+control | CHANGED | rc=0 >>
+faham
+node02 | CHANGED | rc=0 >>
+faham-node02
+=== NGINX STATUS ===
+control | CHANGED | rc=0 >>
+active
+node02 | CHANGED | rc=0 >>
+active
+=== FIREWALL SERVICES ===
+control | CHANGED | rc=0 >>
+cockpit dhcpv6-client http ssh
+node02 | CHANGED | rc=0 >>
+cockpit dhcpv6-client http ssh
+=== HTTP TEST ===
+control | CHANGED | rc=0 >>
+200
+node02 | CHANGED | rc=0 >>
+200
+=== GIT STATUS ===

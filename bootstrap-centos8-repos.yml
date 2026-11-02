@@ -1,0 +1,100 @@
+---
+- name: Repair CentOS Stream 8 repositories
+  hosts: webservers
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Verify operating system is CentOS Stream 8
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution == "CentOS"
+          - ansible_distribution_major_version == "8"
+        fail_msg: "This playbook supports CentOS Stream 8 only."
+        success_msg: "CentOS Stream 8 detected."
+
+    - name: Create repository backup directory
+      ansible.builtin.file:
+        path: /etc/yum.repos.d/backup-before-vault
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Find CentOS Stream repository files
+      ansible.builtin.find:
+        paths: /etc/yum.repos.d
+        patterns: "CentOS-Stream-*.repo"
+        file_type: file
+      register: centos_repo_files
+
+    - name: Back up CentOS Stream repository files
+      ansible.builtin.copy:
+        src: "{{ item.path }}"
+        dest: "/etc/yum.repos.d/backup-before-vault/{{ item.path | basename }}"
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0644"
+        force: false
+      loop: "{{ centos_repo_files.files }}"
+
+    - name: Disable old CentOS Stream repository files
+      ansible.builtin.command:
+        cmd: "mv {{ item.path }} {{ item.path }}.disabled"
+        creates: "{{ item.path }}.disabled"
+        removes: "{{ item.path }}"
+      loop: "{{ centos_repo_files.files }}"
+
+    - name: Configure CentOS Stream 8 Vault repositories
+      ansible.builtin.copy:
+        dest: /etc/yum.repos.d/CentOS-Stream-Vault.repo
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          [baseos]
+          name=CentOS Stream 8 - BaseOS Vault
+          baseurl=https://vault.centos.org/centos/8-stream/BaseOS/$basearch/os/
+          enabled=1
+          gpgcheck=1
+          gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial
+
+          [appstream]
+          name=CentOS Stream 8 - AppStream Vault
+          baseurl=https://vault.centos.org/centos/8-stream/AppStream/$basearch/os/
+          enabled=1
+          gpgcheck=1
+          gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial
+
+          [extras]
+          name=CentOS Stream 8 - Extras Vault
+          baseurl=https://vault.centos.org/centos/8-stream/extras/$basearch/os/
+          enabled=1
+          gpgcheck=1
+          gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial
+
+    - name: Clean DNF cache
+      ansible.builtin.command:
+        cmd: dnf clean all
+      changed_when: true
+
+    - name: Build DNF metadata cache
+      ansible.builtin.command:
+        cmd: dnf makecache
+      register: dnf_cache
+      changed_when: true
+
+    - name: Display DNF cache result
+      ansible.builtin.debug:
+        var: dnf_cache.stdout_lines
+
+    - name: Verify enabled repositories
+      ansible.builtin.command:
+        cmd: dnf repolist
+      register: repo_list
+      changed_when: false
+
+    - name: Display enabled repositories
+      ansible.builtin.debug:
+        var: repo_list.stdout_lines
