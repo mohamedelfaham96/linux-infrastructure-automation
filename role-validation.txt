@@ -1,0 +1,93 @@
+=== DATE ===
+Mon Nov  2 13:41:38 GMT 2026
+=== PROJECT STRUCTURE ===
+.
+├── ansible.cfg
+├── bootstrap-centos8-repos.yml
+├── group_vars
+│   └── webservers.yml
+├── inventory.ini
+├── inventory.ini.backup
+├── inventory.ini.before-multinode
+├── multinode-validation.txt
+├── roles
+│   └── webserver
+│       ├── defaults
+│       │   └── main.yml
+│       ├── files
+│       ├── handlers
+│       │   └── main.yml
+│       ├── meta
+│       │   └── main.yml
+│       ├── README.md
+│       ├── tasks
+│       │   └── main.yml
+│       ├── templates
+│       │   └── index.html.j2
+│       ├── tests
+│       │   ├── inventory
+│       │   └── test.yml
+│       └── vars
+│           └── main.yml
+├── role-validation.txt
+├── site.yml
+├── templates
+│   └── index.html.j2
+└── webserver.yml
+
+12 directories, 20 files
+=== INVENTORY ===
+@all:
+  |--@ungrouped:
+  |--@webservers:
+  |  |--control
+  |  |--node02
+=== CONNECTIVITY ===
+control | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+node02 | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+=== SYNTAX ===
+
+playbook: site.yml
+=== ROLE TASKS ===
+
+playbook: site.yml
+
+  play #1 (webservers): Configure all Linux web servers	TAGS: []
+    tasks:
+      webserver : Install required web server packages	TAGS: [packages]
+      webserver : Start and enable firewalld	TAGS: [firewall]
+      webserver : Allow required services through firewalld	TAGS: [firewall]
+      webserver : Deploy website from Jinja2 template	TAGS: [website]
+      webserver : Start and enable nginx	TAGS: [nginx]
+=== ROLE TAGS ===
+
+playbook: site.yml
+
+  play #1 (webservers): Configure all Linux web servers	TAGS: []
+      TASK TAGS: [firewall, nginx, packages, website]
+=== NGINX STATUS ===
+control | CHANGED | rc=0 >>
+active
+node02 | CHANGED | rc=0 >>
+active
+=== HTTP TEST ===
+control | CHANGED | rc=0 >>
+200
+node02 | CHANGED | rc=0 >>
+200
+=== GIT ===
+On branch main
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	role-validation.txt
+
+nothing added to commit but untracked files present (use "git add" to track)
+d8180ec Refactor web server automation into reusable Ansible role
+6aca7c0 Manage multiple CentOS web servers with Ansible
+b8d6748 Deploy Nginx website using Ansible Jinja2 template
