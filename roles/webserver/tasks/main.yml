@@ -1,0 +1,44 @@
+---
+- name: Install required web server packages
+  ansible.builtin.dnf:
+    name: "{{ web_packages }}"
+    state: present
+  tags:
+    - packages
+
+- name: Start and enable firewalld
+  ansible.builtin.service:
+    name: firewalld
+    state: started
+    enabled: true
+  tags:
+    - firewall
+
+- name: Allow required services through firewalld
+  ansible.posix.firewalld:
+    service: "{{ item }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  loop: "{{ web_firewall_services }}"
+  tags:
+    - firewall
+
+- name: Deploy website from Jinja2 template
+  ansible.builtin.template:
+    src: index.html.j2
+    dest: /usr/share/nginx/html/index.html
+    owner: "{{ web_owner }}"
+    group: "{{ web_group }}"
+    mode: "{{ web_mode }}"
+  notify: Reload nginx
+  tags:
+    - website
+
+- name: Start and enable nginx
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true
+  tags:
+          - nginx

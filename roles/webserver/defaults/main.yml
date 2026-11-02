@@ -1,0 +1,15 @@
+---
+web_title: "Mohamed Ansible Web Server"
+web_owner: root
+web_group: root
+web_mode: "0644"
+
+web_packages:
+  - nginx
+  - curl
+  - git
+  - firewalld
+  - python3-firewall
+
+web_firewall_services:
+  - http

@@ -1,0 +1,12 @@
+---
+web_title: "Mohamed Multi-Node Ansible Platform"
+
+web_packages:
+  - nginx
+  - curl
+  - git
+  - firewalld
+  - python3-firewall
+
+web_firewall_services:
+  - http
