@@ -1,0 +1,53 @@
+---
+- name: Configure Linux web server
+  hosts: webservers
+  become: true
+  gather_facts: true
+
+  vars:
+    web_title: "Mohamed Ansible Web Server"
+
+  tasks:
+    - name: Install required packages
+      ansible.builtin.dnf:
+        name:
+          - nginx
+          - curl
+          - git
+          - firewalld
+          - python3-firewall
+        state: present
+
+    - name: Start and enable firewalld
+      ansible.builtin.service:
+        name: firewalld
+        state: started
+        enabled: true
+
+    - name: Allow HTTP service through firewalld
+      ansible.posix.firewalld:
+        service: http
+        permanent: true
+        immediate: true
+        state: enabled
+
+    - name: Deploy website from Jinja2 template
+      ansible.builtin.template:
+        src: templates/index.html.j2
+        dest: /usr/share/nginx/html/index.html
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Reload nginx
+
+    - name: Start and enable nginx
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true
+
+  handlers:
+    - name: Reload nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded
