@@ -1,0 +1,10 @@
+---
+- name: Validate and reload sshd
+  ansible.builtin.shell: |
+    sshd -t && systemctl reload sshd
+  changed_when: true
+
+- name: Restart fail2ban
+  ansible.builtin.service:
+    name: fail2ban
+    state: restarted

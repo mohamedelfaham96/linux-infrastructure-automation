@@ -1,8 +1,9 @@
 ---
-- name: Configure all Linux web servers
+- name: Configure all Linux servers
   hosts: webservers
   become: true
   gather_facts: true
 
   roles:
     - webserver
+    - security

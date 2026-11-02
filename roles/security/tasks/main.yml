@@ -1,0 +1,119 @@
+---
+- name: Create administrative user
+  ansible.builtin.user:
+    name: "{{ security_admin_user }}"
+    groups: "{{ security_admin_group }}"
+    append: true
+    create_home: true
+    shell: /bin/bash
+    state: present
+  tags:
+    - admin_user
+
+- name: Create SSH directory for administrative user
+  ansible.builtin.file:
+    path: "/home/{{ security_admin_user }}/.ssh"
+    state: directory
+    owner: "{{ security_admin_user }}"
+    group: "{{ security_admin_user }}"
+    mode: "0700"
+  tags:
+    - admin_user
+
+- name: Deploy SSH public key for administrative user
+  ansible.posix.authorized_key:
+    user: "{{ security_admin_user }}"
+    key: "{{ security_admin_public_key }}"
+    state: present
+    exclusive: false
+  tags:
+    - admin_user
+
+- name: Configure passwordless sudo for Ansible lab
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/{{ security_admin_user }}"
+    owner: root
+    group: root
+    mode: "0440"
+    content: |
+      {{ security_admin_user }} ALL=(ALL) NOPASSWD: ALL
+    validate: "/usr/sbin/visudo -cf %s"
+  tags:
+    - admin_user
+
+- name: Restore SELinux context for SSH directory
+  ansible.builtin.command:
+    cmd: "restorecon -Rv /home/{{ security_admin_user }}/.ssh"
+  changed_when: false
+  tags:
+    - admin_user
+
+- name: Deploy SSH warning banner
+  ansible.builtin.template:
+    src: issue.net.j2
+    dest: /etc/issue.net
+    owner: root
+    group: root
+    mode: "0644"
+  tags:
+    - ssh_hardening
+
+- name: Ensure SSH drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/ssh/sshd_config.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  tags:
+    - ssh_hardening
+
+- name: Ensure sshd loads drop-in configuration files
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    line: "Include /etc/ssh/sshd_config.d/*.conf"
+    insertbefore: BOF
+    state: present
+    backup: true
+  notify: Validate and reload sshd
+  tags:
+    - ssh_hardening
+
+- name: Deploy SSH hardening configuration
+  ansible.builtin.template:
+    src: 99-security-hardening.conf.j2
+    dest: /etc/ssh/sshd_config.d/99-security-hardening.conf
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Validate and reload sshd
+  tags:
+    - ssh_hardening
+
+- name: Install Fail2Ban packages
+  ansible.builtin.dnf:
+    name:
+      - fail2ban
+      - fail2ban-firewalld
+    state: present
+  tags:
+    - fail2ban
+
+- name: Deploy Fail2Ban SSH jail
+  ansible.builtin.template:
+    src: sshd.local.j2
+    dest: /etc/fail2ban/jail.d/sshd.local
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart fail2ban
+  tags:
+    - fail2ban
+
+- name: Start and enable Fail2Ban
+  ansible.builtin.service:
+    name: fail2ban
+    state: started
+    enabled: true
+  tags:
+    - fail2ban
