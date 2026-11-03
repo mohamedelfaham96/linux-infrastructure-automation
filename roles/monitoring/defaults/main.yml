@@ -1,0 +1,17 @@
+---
+monitoring_base_dir: /opt/linux-monitoring
+monitoring_log_dir: /var/log/linux-monitoring
+monitoring_script: system-health.sh
+
+monitoring_disk_threshold: 80
+monitoring_memory_threshold: 80
+monitoring_load_threshold: 3
+
+monitoring_cron_minute: "*/10"
+monitoring_cron_user: root
+
+monitoring_services:
+  - sshd
+  - nginx
+  - firewalld
+  - fail2ban

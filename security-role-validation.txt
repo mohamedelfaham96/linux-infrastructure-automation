@@ -1,0 +1,70 @@
+=== DATE ===
+Mon Nov  2 14:40:06 GMT 2026
+=== SSH STATUS ===
+control | CHANGED | rc=0 >>
+active
+node02 | CHANGED | rc=0 >>
+active
+=== SSH HARDENING ===
+control | CHANGED | rc=0 >>
+logingracetime 30
+maxauthtries 3
+permitrootlogin no
+pubkeyauthentication yes
+passwordauthentication no
+banner /etc/issue.net
+node02 | CHANGED | rc=0 >>
+logingracetime 30
+maxauthtries 3
+permitrootlogin no
+pubkeyauthentication yes
+passwordauthentication no
+banner /etc/issue.net
+=== FAIL2BAN SERVICE ===
+control | CHANGED | rc=0 >>
+active
+node02 | CHANGED | rc=0 >>
+active
+=== FAIL2BAN JAIL ===
+control | CHANGED | rc=0 >>
+Status for the jail: sshd
+|- Filter
+|  |- Currently failed:	1
+|  |- Total failed:	1
+|  `- Journal matches:	_SYSTEMD_UNIT=sshd.service + _COMM=sshd
+`- Actions
+   |- Currently banned:	3
+   |- Total banned:	3
+   `- Banned IP list:	141.94.26.113 179.43.153.10 78.44.192.210
+node02 | CHANGED | rc=0 >>
+Status for the jail: sshd
+|- Filter
+|  |- Currently failed:	0
+|  |- Total failed:	0
+|  `- Journal matches:	_SYSTEMD_UNIT=sshd.service + _COMM=sshd
+`- Actions
+   |- Currently banned:	0
+   |- Total banned:	0
+   `- Banned IP list:	
+=== ADMIN USER ===
+control | CHANGED | rc=0 >>
+uid=1001(mohamed) gid=1001(mohamed) groups=1001(mohamed),10(wheel)
+node02 | CHANGED | rc=0 >>
+uid=1001(mohamed) gid=1001(mohamed) groups=1001(mohamed),10(wheel)
+=== WEBSITE HEALTH ===
+control | CHANGED | rc=0 >>
+200
+node02 | CHANGED | rc=0 >>
+200
+=== GIT ===
+On branch main
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	security-role-validation.txt
+
+nothing added to commit but untracked files present (use "git add" to track)
+e51c8fd Add reusable SSH hardening and Fail2Ban security role
+078e2a2 Add Ansible role validation report
+d8180ec Refactor web server automation into reusable Ansible role
+6aca7c0 Manage multiple CentOS web servers with Ansible
+b8d6748 Deploy Nginx website using Ansible Jinja2 template

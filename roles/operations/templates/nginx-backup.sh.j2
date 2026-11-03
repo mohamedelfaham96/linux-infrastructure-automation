@@ -1,0 +1,52 @@
+#!/bin/bash
+
+set -o nounset
+set -o pipefail
+
+SOURCE="{{ operations_backup_source }}"
+DESTINATION="{{ operations_backup_root }}"
+LOG_FILE="{{ operations_log_dir }}/nginx-backup.log"
+RETENTION_DAYS="{{ operations_retention_days }}"
+DATE=$(date +%F-%H%M%S)
+BACKUP_FILE="${DESTINATION}/nginx-backup-${DATE}.tar.gz"
+
+log_message() {
+    echo "$(date '+%F %T') $1" >> "$LOG_FILE"
+}
+
+mkdir -p "$DESTINATION"
+mkdir -p "$(dirname "$LOG_FILE")"
+
+log_message "INFO: Backup started"
+
+if [ ! -d "$SOURCE" ]; then
+    log_message "ERROR: Source directory does not exist: $SOURCE"
+    exit 1
+fi
+
+if ! tar -czf "$BACKUP_FILE" -C "$SOURCE" . 2>> "$LOG_FILE"; then
+    log_message "ERROR: Backup operation failed"
+    rm -f "$BACKUP_FILE"
+    exit 2
+fi
+
+if ! tar -tzf "$BACKUP_FILE" >/dev/null 2>&1; then
+    log_message "ERROR: Backup archive validation failed"
+    rm -f "$BACKUP_FILE"
+    exit 3
+fi
+
+BACKUP_SIZE=$(du -h "$BACKUP_FILE" | awk '{print $1}')
+log_message "SUCCESS: Backup created: $BACKUP_FILE"
+log_message "INFO: Backup size: $BACKUP_SIZE"
+
+find "$DESTINATION" \
+    -type f \
+    -name 'nginx-backup-*.tar.gz' \
+    -mtime "+${RETENTION_DAYS}" \
+    -delete
+
+log_message "INFO: Old backup cleanup completed"
+log_message "INFO: Backup finished"
+
+exit 0

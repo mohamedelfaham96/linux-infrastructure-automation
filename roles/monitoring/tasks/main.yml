@@ -1,0 +1,76 @@
+---
+- name: Install monitoring dependencies
+  ansible.builtin.dnf:
+    name:
+      - curl
+      - cronie
+      - logrotate
+      - gawk
+    state: present
+  tags:
+    - monitoring_packages
+
+- name: Create monitoring directory
+  ansible.builtin.file:
+    path: "{{ monitoring_base_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  tags:
+    - monitoring
+
+- name: Create monitoring log directory
+  ansible.builtin.file:
+    path: "{{ monitoring_log_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+  tags:
+    - monitoring
+
+- name: Deploy system health monitoring script
+  ansible.builtin.template:
+    src: system-health.sh.j2
+    dest: "{{ monitoring_base_dir }}/{{ monitoring_script }}"
+    owner: root
+    group: root
+    mode: "0750"
+  tags:
+    - monitoring
+
+- name: Deploy monitoring logrotate configuration
+  ansible.builtin.template:
+    src: linux-monitoring.logrotate.j2
+    dest: /etc/logrotate.d/linux-monitoring
+    owner: root
+    group: root
+    mode: "0644"
+  tags:
+    - monitoring
+
+- name: Start and enable cron service
+  ansible.builtin.service:
+    name: crond
+    state: started
+    enabled: true
+  tags:
+    - monitoring_cron
+
+- name: Schedule system health monitoring
+  ansible.builtin.cron:
+    name: Linux system health monitoring
+    user: "{{ monitoring_cron_user }}"
+    minute: "{{ monitoring_cron_minute }}"
+    job: "{{ monitoring_base_dir }}/{{ monitoring_script }}"
+    state: present
+  tags:
+    - monitoring_cron
+
+- name: Run initial system health check
+  ansible.builtin.command:
+    cmd: "{{ monitoring_base_dir }}/{{ monitoring_script }}"
+  changed_when: false
+  tags:
+    - monitoring_test

@@ -1,0 +1,60 @@
+#!/bin/bash
+
+HOSTNAME_VALUE=$(hostname)
+DATE_VALUE=$(date '+%F %T %Z')
+LOG_DIR="{{ monitoring_log_dir }}"
+LOG_FILE="${LOG_DIR}/system-health.log"
+
+DISK_THRESHOLD={{ monitoring_disk_threshold }}
+MEMORY_THRESHOLD={{ monitoring_memory_threshold }}
+LOAD_THRESHOLD={{ monitoring_load_threshold }}
+
+mkdir -p "$LOG_DIR"
+
+DISK_USAGE=$(df -P / | awk 'NR==2 {gsub("%","",$5); print $5}')
+MEMORY_USAGE=$(free | awk '/Mem:/ {printf "%.0f", $3/$2 * 100}')
+LOAD_AVERAGE=$(awk '{print $1}' /proc/loadavg)
+HTTP_STATUS=$(curl -s -o /dev/null -w '%{http_code}' http://localhost || echo "000")
+
+echo "==================================================" >> "$LOG_FILE"
+echo "Date: $DATE_VALUE" >> "$LOG_FILE"
+echo "Hostname: $HOSTNAME_VALUE" >> "$LOG_FILE"
+echo "Root disk usage: ${DISK_USAGE}%" >> "$LOG_FILE"
+echo "Memory usage: ${MEMORY_USAGE}%" >> "$LOG_FILE"
+echo "Load average: $LOAD_AVERAGE" >> "$LOG_FILE"
+echo "HTTP status: $HTTP_STATUS" >> "$LOG_FILE"
+
+if [ "$DISK_USAGE" -ge "$DISK_THRESHOLD" ]; then
+    echo "WARNING: Root disk usage exceeded ${DISK_THRESHOLD}%" >> "$LOG_FILE"
+else
+    echo "OK: Root disk usage is normal" >> "$LOG_FILE"
+fi
+
+if [ "$MEMORY_USAGE" -ge "$MEMORY_THRESHOLD" ]; then
+    echo "WARNING: Memory usage exceeded ${MEMORY_THRESHOLD}%" >> "$LOG_FILE"
+else
+    echo "OK: Memory usage is normal" >> "$LOG_FILE"
+fi
+
+if awk "BEGIN {exit !($LOAD_AVERAGE >= $LOAD_THRESHOLD)}"; then
+    echo "WARNING: Load average exceeded $LOAD_THRESHOLD" >> "$LOG_FILE"
+else
+    echo "OK: Load average is normal" >> "$LOG_FILE"
+fi
+
+if [ "$HTTP_STATUS" = "200" ]; then
+    echo "OK: Nginx HTTP health check passed" >> "$LOG_FILE"
+else
+    echo "CRITICAL: Nginx HTTP health check failed with status $HTTP_STATUS" >> "$LOG_FILE"
+fi
+
+{% for service in monitoring_services %}
+if systemctl is-active --quiet {{ service }}; then
+    echo "OK: Service {{ service }} is active" >> "$LOG_FILE"
+else
+    echo "CRITICAL: Service {{ service }} is inactive" >> "$LOG_FILE"
+fi
+{% endfor %}
+
+echo "Health check completed" >> "$LOG_FILE"
+exit 0

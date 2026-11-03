@@ -1,0 +1,14 @@
+---
+operations_backup_source: /usr/share/nginx/html
+operations_backup_root: /var/backups/nginx
+operations_log_dir: /var/log/linux-lab
+operations_retention_days: 7
+operations_disk_threshold: 80
+
+operations_backup_schedule:
+  minute: "5"
+  hour: "2"
+
+operations_monitor_schedule:
+  minute: "*/10"
+  hour: "*"

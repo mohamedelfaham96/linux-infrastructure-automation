@@ -7,3 +7,5 @@
   roles:
     - webserver
     - security
+    - operations
+    - monitoring

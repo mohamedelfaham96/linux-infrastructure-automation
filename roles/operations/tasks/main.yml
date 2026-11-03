@@ -1,0 +1,80 @@
+---
+- name: Create backup directory
+  ansible.builtin.file:
+    path: "{{ operations_backup_root }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+  tags:
+    - backup
+
+- name: Create operations log directory
+  ansible.builtin.file:
+    path: "{{ operations_log_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+  tags:
+    - backup
+    - monitoring
+
+- name: Deploy Nginx backup script
+  ansible.builtin.template:
+    src: nginx-backup.sh.j2
+    dest: /usr/local/sbin/nginx-backup
+    owner: root
+    group: root
+    mode: "0750"
+  tags:
+    - backup
+
+- name: Deploy disk monitoring script
+  ansible.builtin.template:
+    src: check-disk-space.sh.j2
+    dest: /usr/local/sbin/check-disk-space
+    owner: root
+    group: root
+    mode: "0750"
+  tags:
+    - monitoring
+
+- name: Configure daily Nginx backup
+  ansible.builtin.cron:
+    name: "Nginx automated backup"
+    user: root
+    minute: "{{ operations_backup_schedule.minute }}"
+    hour: "{{ operations_backup_schedule.hour }}"
+    job: "/usr/local/sbin/nginx-backup"
+  tags:
+    - backup
+    - cron
+
+- name: Configure disk monitoring
+  ansible.builtin.cron:
+    name: "Backup disk monitoring"
+    user: root
+    minute: "{{ operations_monitor_schedule.minute }}"
+    hour: "{{ operations_monitor_schedule.hour }}"
+    job: "/usr/local/sbin/check-disk-space"
+  tags:
+    - monitoring
+    - cron
+
+- name: Configure log rotation
+  ansible.builtin.template:
+    src: linux-lab-logrotate.j2
+    dest: /etc/logrotate.d/linux-lab
+    owner: root
+    group: root
+    mode: "0644"
+  tags:
+    - logrotate
+
+- name: Validate logrotate configuration
+  ansible.builtin.command:
+    cmd: logrotate -d /etc/logrotate.d/linux-lab
+  changed_when: false
+  tags:
+    - logrotate

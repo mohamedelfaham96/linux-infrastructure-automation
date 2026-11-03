@@ -1,0 +1,29 @@
+#!/bin/bash
+
+BACKUP_PATH="{{ operations_backup_root }}"
+THRESHOLD="{{ operations_disk_threshold }}"
+LOG_FILE="{{ operations_log_dir }}/disk-monitor.log"
+
+mkdir -p "$(dirname "$LOG_FILE")"
+
+CHECK_PATH="$BACKUP_PATH"
+
+if [ ! -d "$CHECK_PATH" ]; then
+    echo "$(date '+%F %T') ERROR: Directory does not exist: $CHECK_PATH" >> "$LOG_FILE"
+    exit 1
+fi
+
+USAGE=$(df -P "$CHECK_PATH" | awk 'NR==2 {gsub("%","",$5); print $5}')
+
+if ! [[ "$USAGE" =~ ^[0-9]+$ ]]; then
+    echo "$(date '+%F %T') ERROR: Could not determine disk usage" >> "$LOG_FILE"
+    exit 1
+fi
+
+if [ "$USAGE" -ge "$THRESHOLD" ]; then
+    echo "$(date '+%F %T') WARNING: Disk usage is ${USAGE}%, threshold is ${THRESHOLD}%" >> "$LOG_FILE"
+    exit 2
+fi
+
+echo "$(date '+%F %T') OK: Disk usage is ${USAGE}%, threshold is ${THRESHOLD}%" >> "$LOG_FILE"
+exit 0
