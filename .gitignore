@@ -1,2 +1,7 @@
 *.backup
 *.before-multinode
+
+# Local Ansible Vault password files
+.vault-password
+*vault-password*
+*.vault-pass

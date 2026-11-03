@@ -1,0 +1,20 @@
+---
+- name: Validate Ansible Vault
+  hosts: webservers
+  gather_facts: false
+
+  tasks:
+    - name: Confirm Vault variable is loaded
+      ansible.builtin.assert:
+        that:
+          - vault_demo_api_token is defined
+          - vault_demo_api_token | length > 0
+          - vault_backup_passphrase is defined
+          - vault_backup_passphrase | length > 0
+        success_msg: "Vault variables loaded successfully."
+        fail_msg: "Vault variables are missing."
+
+    - name: Demonstrate protected secret usage
+      ansible.builtin.debug:
+        msg: "Protected variable was accessed safely."
+      no_log: true
