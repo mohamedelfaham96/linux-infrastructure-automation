@@ -1,7 +1,7 @@
 ---
 - name: Install required web server packages
   ansible.builtin.dnf:
-    name: "{{ web_packages }}"
+    name: "{{ webserver_packages }}"
     state: present
   tags:
     - packages
@@ -20,7 +20,7 @@
     permanent: true
     immediate: true
     state: enabled
-  loop: "{{ web_firewall_services }}"
+  loop: "{{ webserver_firewall_services }}"
   tags:
     - firewall
 
@@ -28,9 +28,9 @@
   ansible.builtin.template:
     src: index.html.j2
     dest: /usr/share/nginx/html/index.html
-    owner: "{{ web_owner }}"
-    group: "{{ web_group }}"
-    mode: "{{ web_mode }}"
+    owner: "{{ webserver_owner }}"
+    group: "{{ webserver_group }}"
+    mode: "{{ webserver_mode }}"
   notify: Reload nginx
   tags:
     - website
@@ -41,4 +41,4 @@
     state: started
     enabled: true
   tags:
-          - nginx
+    - nginx
