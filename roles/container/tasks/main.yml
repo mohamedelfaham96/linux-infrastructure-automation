@@ -1,0 +1,117 @@
+---
+- name: Install Podman
+  ansible.builtin.dnf:
+    name: podman
+    state: present
+  tags:
+    - container_packages
+
+- name: Create container build directory
+  ansible.builtin.file:
+    path: "{{ container_build_directory }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  tags:
+    - container
+
+- name: Deploy Containerfile
+  ansible.builtin.template:
+    src: Containerfile.j2
+    dest: "{{ container_build_directory }}/Containerfile"
+    owner: root
+    group: root
+    mode: "0644"
+  register: container_containerfile
+  tags:
+    - container
+    - container_build
+
+- name: Deploy container website
+  ansible.builtin.copy:
+    src: index.html
+    dest: "{{ container_build_directory }}/index.html"
+    owner: root
+    group: root
+    mode: "0644"
+  register: container_website
+  tags:
+    - container
+    - container_build
+
+- name: Build Nginx container image
+  ansible.builtin.command:
+    cmd: >-
+      podman build
+      --tag {{ container_image_name }}:{{ container_image_tag }}
+      {{ container_build_directory }}
+  when: container_containerfile.changed or container_website.changed
+  tags:
+    - container
+    - container_build
+
+- name: Check whether Nginx container exists
+  ansible.builtin.command:
+    cmd: "podman container exists {{ container_name }}"
+  register: container_exists
+  changed_when: false
+  failed_when: false
+  tags:
+    - container
+
+- name: Create Nginx container
+  ansible.builtin.command:
+    cmd: >-
+      podman create
+      --name {{ container_name }}
+      --restart=always
+      --publish {{ container_host_port }}:{{ container_internal_port }}
+      {{ container_image_name }}:{{ container_image_tag }}
+  when: container_exists.rc != 0
+  tags:
+    - container
+
+- name: Check whether Nginx container is running
+  ansible.builtin.command:
+    cmd: "podman inspect --format={{ '{{' }}.State.Running{{ '}}' }} {{ container_name }}"
+  register: container_running
+  changed_when: false
+  tags:
+    - container
+
+- name: Start Nginx container
+  ansible.builtin.command:
+    cmd: "podman start {{ container_name }}"
+  when: container_running.stdout | trim != "true"
+  tags:
+    - container
+
+- name: Enable Podman restart service
+  ansible.builtin.service:
+    name: podman-restart.service
+    state: started
+    enabled: true
+  tags:
+    - container
+
+- name: Open container HTTP port
+  ansible.posix.firewalld:
+    port: "{{ container_host_port }}/tcp"
+    permanent: true
+    immediate: true
+    state: enabled
+  tags:
+    - container_firewall
+
+- name: Validate container HTTP endpoint
+  ansible.builtin.uri:
+    url: "http://localhost:{{ container_host_port }}"
+    status_code: 200
+    return_content: false
+  register: container_health
+  retries: 5
+  delay: 2
+  until: container_health.status == 200
+  tags:
+    - container_test

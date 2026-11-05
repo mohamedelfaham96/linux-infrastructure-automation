@@ -1,0 +1,7 @@
+---
+container_image_name: mohamed-nginx-lab
+container_image_tag: latest
+container_name: nginx-lab
+container_host_port: 8080
+container_internal_port: 80
+container_build_directory: /opt/nginx-container
