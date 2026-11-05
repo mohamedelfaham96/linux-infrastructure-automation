@@ -1,0 +1,95 @@
+---
+name: Ansible CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Ansible Project
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install Ansible validation tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible-core ansible-lint yamllint
+
+      - name: Install Ansible collections
+        run: |
+          ansible-galaxy collection install ansible.posix
+
+      - name: Create temporary Vault password file
+        env:
+          ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+        run: |
+          test -n "$ANSIBLE_VAULT_PASSWORD"
+          printf '%s' "$ANSIBLE_VAULT_PASSWORD" \
+            > "$HOME/.ansible-vault-password"
+          chmod 600 "$HOME/.ansible-vault-password"
+
+      - name: Verify Vault file encryption
+        run: |
+          head -n 1 group_vars/all/vault.yml \
+            | grep -F '$ANSIBLE_VAULT;'
+
+      - name: Validate Ansible inventory
+        env:
+          ANSIBLE_VAULT_PASSWORD_FILE: /home/runner/.ansible-vault-password
+        run: |
+          ansible-inventory --graph
+          ansible-inventory --list > /tmp/inventory.json
+
+      - name: Validate YAML files
+        run: |
+          yamllint -d '{extends: relaxed, rules: {line-length: disable}}' \
+            site.yml \
+            bootstrap-centos8-repos.yml \
+            vault-test.yml \
+            group_vars \
+            host_vars \
+            roles
+
+      - name: Run Ansible syntax checks
+        env:
+          ANSIBLE_VAULT_PASSWORD_FILE: /home/runner/.ansible-vault-password
+        run: |
+          ansible-playbook site.yml --syntax-check
+          ansible-playbook bootstrap-centos8-repos.yml --syntax-check
+          ansible-playbook vault-test.yml --syntax-check
+
+      - name: Run Ansible lint
+        env:
+          ANSIBLE_VAULT_PASSWORD_FILE: /home/runner/.ansible-vault-password
+        run: |
+          ansible-lint --profile basic site.yml
+          ansible-lint --profile basic bootstrap-centos8-repos.yml
+
+      - name: Confirm Vault password is not tracked
+        run: |
+          if git ls-files | grep -Ei 'vault-password|vault-pass'; then
+            echo "ERROR: A Vault password file is tracked by Git."
+            exit 1
+          fi
+
+      - name: Remove temporary Vault password
+        if: always()
+        run: |
+          rm -f "$HOME/.ansible-vault-password"
