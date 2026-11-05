@@ -1,10 +1,10 @@
 # Managed by Ansible - Security Role
 
-PermitRootLogin {{ ssh_permit_root_login }}
-PubkeyAuthentication {{ ssh_pubkey_authentication }}
-PasswordAuthentication {{ ssh_password_authentication }}
+PermitRootLogin {{ security_ssh_permit_root_login }}
+PubkeyAuthentication {{ security_ssh_pubkey_authentication }}
+PasswordAuthentication {{ security_ssh_password_authentication }}
 PermitEmptyPasswords no
 ChallengeResponseAuthentication no
-MaxAuthTries {{ ssh_max_auth_tries }}
-LoginGraceTime {{ ssh_login_grace_time }}
+MaxAuthTries {{ security_ssh_max_auth_tries }}
+LoginGraceTime {{ security_ssh_login_grace_time }}
 Banner /etc/issue.net

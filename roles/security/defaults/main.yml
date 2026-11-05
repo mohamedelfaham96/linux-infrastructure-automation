@@ -3,12 +3,12 @@ security_admin_user: mohamed
 security_admin_group: wheel
 security_admin_public_key: "{{ lookup('file', '/home/mohamed/.ssh/id_ed25519.pub') }}"
 
-ssh_permit_root_login: "no"
-ssh_password_authentication: "no"
-ssh_pubkey_authentication: "yes"
-ssh_max_auth_tries: 3
-ssh_login_grace_time: 30
+security_ssh_permit_root_login: "no"
+security_ssh_password_authentication: "no"
+security_ssh_pubkey_authentication: "yes"
+security_ssh_max_auth_tries: 3
+security_ssh_login_grace_time: 30
 
-fail2ban_bantime: "1h"
-fail2ban_findtime: "10m"
-fail2ban_maxretry: 5
+security_fail2ban_bantime: "1h"
+security_fail2ban_findtime: "10m"
+security_fail2ban_maxretry: 5
