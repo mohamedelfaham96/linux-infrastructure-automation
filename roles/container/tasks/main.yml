@@ -6,50 +6,25 @@
   tags:
     - container_packages
 
-- name: Create container build directory
-  ansible.builtin.file:
-    path: "{{ container_build_directory }}"
-    state: directory
-    owner: root
-    group: root
-    mode: "0755"
+- name: Pull Nginx image from GHCR
+  ansible.builtin.command:
+    cmd: "podman pull {{ container_full_image }}"
+  register: container_image_pull
+  changed_when: false
   tags:
     - container
+    - container_pull
 
-- name: Deploy Containerfile
-  ansible.builtin.template:
-    src: Containerfile.j2
-    dest: "{{ container_build_directory }}/Containerfile"
-    owner: root
-    group: root
-    mode: "0644"
-  register: container_containerfile
-  tags:
-    - container
-    - container_build
-
-- name: Deploy container website
-  ansible.builtin.copy:
-    src: index.html
-    dest: "{{ container_build_directory }}/index.html"
-    owner: root
-    group: root
-    mode: "0644"
-  register: container_website
-  tags:
-    - container
-    - container_build
-
-- name: Build Nginx container image
+- name: Get pulled image ID
   ansible.builtin.command:
     cmd: >-
-      podman build
-      --tag {{ container_image_name }}:{{ container_image_tag }}
-      {{ container_build_directory }}
-  when: container_containerfile.changed or container_website.changed
+      podman image inspect
+      --format={{ '{{' }}.Id{{ '}}' }}
+      {{ container_full_image }}
+  register: container_pulled_image
+  changed_when: false
   tags:
     - container
-    - container_build
 
 - name: Check whether Nginx container exists
   ansible.builtin.command:
@@ -60,21 +35,58 @@
   tags:
     - container
 
-- name: Create Nginx container
+- name: Get current container image ID
+  ansible.builtin.command:
+    cmd: >-
+      podman inspect
+      --format={{ '{{' }}.Image{{ '}}' }}
+      {{ container_name }}
+  register: container_current_image
+  changed_when: false
+  failed_when: false
+  when: container_exists.rc == 0
+  tags:
+    - container
+
+- name: Stop outdated Nginx container
+  ansible.builtin.command:
+    cmd: "podman stop {{ container_name }}"
+  when:
+    - container_exists.rc == 0
+    - container_current_image.stdout | trim != container_pulled_image.stdout | trim
+  tags:
+    - container
+
+- name: Remove outdated Nginx container
+  ansible.builtin.command:
+    cmd: "podman rm {{ container_name }}"
+  when:
+    - container_exists.rc == 0
+    - container_current_image.stdout | trim != container_pulled_image.stdout | trim
+  register: container_removed
+  tags:
+    - container
+
+- name: Create Nginx container from GHCR image
   ansible.builtin.command:
     cmd: >-
       podman create
       --name {{ container_name }}
-      --restart=always
+      --restart={{ container_restart_policy }}
       --publish {{ container_host_port }}:{{ container_internal_port }}
-      {{ container_image_name }}:{{ container_image_tag }}
-  when: container_exists.rc != 0
+      {{ container_full_image }}
+  when:
+    - container_exists.rc != 0 or
+      container_removed is changed
   tags:
     - container
 
 - name: Check whether Nginx container is running
   ansible.builtin.command:
-    cmd: "podman inspect --format={{ '{{' }}.State.Running{{ '}}' }} {{ container_name }}"
+    cmd: >-
+      podman inspect
+      --format={{ '{{' }}.State.Running{{ '}}' }}
+      {{ container_name }}
   register: container_running
   changed_when: false
   tags:
@@ -104,14 +116,14 @@
   tags:
     - container_firewall
 
-- name: Validate container HTTP endpoint
+- name: Wait for container HTTP endpoint
   ansible.builtin.uri:
     url: "http://localhost:{{ container_host_port }}"
     status_code: 200
     return_content: false
   register: container_health
-  retries: 5
-  delay: 2
+  retries: 10
+  delay: 3
   until: container_health.status == 200
   tags:
     - container_test
