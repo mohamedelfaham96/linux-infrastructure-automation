@@ -1,0 +1,12 @@
+FROM docker.io/library/nginx:alpine
+
+LABEL org.opencontainers.image.title="Mohamed Nginx Lab"
+LABEL org.opencontainers.image.description="Multi-node Nginx container deployed with Ansible and Podman"
+LABEL org.opencontainers.image.source="https://github.com/mohamedelfaham96/linux-infrastructure-automation"
+
+COPY index.html /usr/share/nginx/html/index.html
+
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
+  CMD wget -q --spider http://localhost/ || exit 1
+
+EXPOSE 80
