@@ -55,3 +55,20 @@ A public OCI Load Balancer distributes HTTP traffic across two Nginx backend ser
 Load distribution was confirmed by sending repeated HTTP requests and receiving responses from both backend hostnames.
 
 High availability was validated by stopping Nginx on one backend. OCI marked the unhealthy backend and continued sending traffic to the healthy server. After Nginx was restarted, the backend returned to the healthy pool.
+
+## Podman Container Load Balancing and Failover
+
+Nginx was deployed as a Podman container on both Linux servers.
+
+- Container name: `nginx-lab`
+- Container image: `mohamed-nginx-lab:latest`
+- Host port: `8080`
+- Container port: `80`
+- Public listener: `84.13.149.218:8080`
+
+OCI Load Balancer distributes HTTP traffic across:
+
+- `10.0.0.83:8080`
+- `10.0.0.5:8080`
+
+Container high availability was validated by stopping the container on `node02`. All ten HTTP requests through the OCI Load Balancer continued to return status code `200` from the healthy backend. After restarting the container, its local HTTP health check returned `200` and the backend rejoined the load-balancing pool.
